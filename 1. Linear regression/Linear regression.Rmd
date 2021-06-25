@@ -1,0 +1,122 @@
+---
+t = t---
+title: "1. Linear regression"
+author: "Robert Lohne"
+date: "13 6 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+############################################################
+## Define packages to be loaded, and if needed, installed ##
+##                                                        ##    
+## by robert lohne (rlohne@gmail.com / @robertlohne)      ##
+############################################################
+
+# 1 Definitions
+# 1.1 Package names 
+# Define the names of the packages to be used, these are stored in the packages variable, and loaded/installed as needed
+packages <- c("gapminder", "dplyr", "ggplot2", "rsample", "gridExtra", "tidymodels")
+
+# 1.1 Packages description
+# 
+
+# 2. Install packages not yet installed
+# Installed packages are stored in the installed packages variable
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# 3. Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+
+```
+
+# 1. What *is* Linear regression?
+
+Linear regression is a simple method for statistical learning. In it's simplest form (aptly named simple regression), it deals with a single explanatory variable (sometimes called the predictor), denoted $X$ and the dependent variable (sometimes referred to as the outcome variable), denoted $Y$. The assumption is that there is a relationship between the two, and that $X$ can be used to predict the value of $Y$. This is usually expressed as $Y = f(X) + \epsilon$ . \
+\
+$f$ is in this case a function of $X$, and $\epsilon$ (greek letter epsilon) is a random error term, that is independent of $X$ and has a mean zero. As an example, consider the following assumption: the miles per gallon (mpg) feature of a car has a relationship with it's weight, and we assume that the lower the weight, the higher the mpg.
+
+```{r ggplot example_negative_correlation_lm, echo=FALSE, }
+df <- mtcars
+model <- lm(mpg ~ wt, data = df)
+df$predicted <- predict(model)
+df$residuals <- residuals(model)
+
+
+ggplot(df, 
+       aes(x = wt,
+           y = mpg)) +
+  geom_point() + 
+  stat_smooth(se = FALSE, 
+              method = "lm",
+              formula = y ~ x) +
+  labs(
+    title = "Cars with low weight tend to get more mpg than heavier cars",
+    caption = "Source: 1974 Motor Trend US"
+  )
+```
+
+The figure above shows the relationship. The points are the datapoints with x and y values for each car in the dataset, and the blue line is the regression line created by the formula $Y = f(X) + \epsilon$ . Going from a visual inspection alone, this seems to be a reasonable assumption. The points are fairly close to the regression line, and as we increase the value of $X$, the value of $Y$ decreases. This is called a negative linear relationship.
+
+The relationship can also be positive; in that case, increasing the value of $X$ also increases the value of $Y$. Using the example from above, one might hypothesize that the amount of horsepower a car has, depends on the displacement of the car (displacement being a measure of the cylinder volume swept by the pistons).
+
+```{r ggplot example_positive_correlation_lm, echo=FALSE, }
+df <- mtcars
+model <- lm(hp ~ disp, data = df)
+df$predicted <- predict(model)
+df$residuals <- residuals(model)
+
+
+ggplot(df, 
+       aes(x = disp,
+           y = hp)) +
+  geom_point() + 
+  stat_smooth(se = FALSE, 
+              method = "lm",
+              formula = y ~ x) +
+  labs(
+    title = "Cars with higher displacement tend to have more horsepower",
+    caption = "Source: 1974 Motor Trend US"
+  )
+
+```
+
+And indeed, this seems to be the case. Compare the figure above with the previous though. Upon visual inspection, there seems to be a clear linear relationship, but as we move towards the higher value of disp, there is a notably larger distance between the regression line and the values of $Y$. This begs the question; how do we assess our models?
+
+## 1.1 How accurate is my model?
+
+In a traditional regression analysis the variance in $Y$ explained by $X$ is denoted $R^2$. This is scored between 0 and 1. 0, or a $R^2$ score of 0.00 means 0 % of the variance is explained by the model, and 1 (100 %) means that all the variance is explained by the model. OK - so what is a "good" value of $R^2$? Well, this is where it gets complicated. It depends on the field, the context and the variables among other things, and is out of scope for a short description that is growing longer by the minute.
+
+Let's revisit the two previous models; mpg explained by weight, and horsepower explained by displacement.
+
+In R, a simple way of defining a linear model is to use the lm() function, creating a model object.
+
+```{r example_lm}
+
+linear_model <- lm(mpg ~ wt, data = mtcars)
+```
+
+The syntax is lm(), and the most common arguments are *formula* and *data*. For further arguments, consult the documentation available.
+
+The formula is given in a specific syntax, where the outcome variable (denoted $Y$) is defined on the left-hand side of the \~ (tilde) symbol, and the explanatory variable(s) on the right-hand side (denoted $X$). In our first example, the formula would be given as: mpg \~ wt. This can be read as "mpg explained by weight".
+
+The call to lm() creates a model object, and the results can be seen using various methods. The standard one being summary().
+
+```{r example_lm}
+
+linear_model <- lm(mpg ~ wt, data = mtcars)
+summary(linear_model)
+```
+
+The summary lists various summaries of the model object that we might be interested in, such as the residuals, and the coefficients of the model. Additionally, we are given the $R^2$ score, as well as another important figure, the P-value (whether or not the relationship is statistically significant). Another option is to use the broom package. Using either tidy() or glance() gives us many of the same results, but in various other formats:
+
+```{r example_lm}
+linear_model <- lm(mpg ~ wt, data = mtcars)
+glance(linear_model)
+tidy(linear_model)
+```
