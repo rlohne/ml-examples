@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # 1 Definitions
 # 1.1 Package names 
 # Define the names of the packages to be used, these are stored in the packages variable, and loaded/installed as needed
-packages <- c("gapminder", "dplyr", "ggplot2", "rsample", "gridExtra", "tidymodels")
+packages <- c("gapminder", "dplyr", "ggplot2", "rsample", "gridExtra", "tidymodels", "Metrics")
 
 # 1.1 Packages description
 # 
@@ -37,7 +37,7 @@ invisible(lapply(packages, library, character.only = TRUE))
 
 # 1. What *is* Linear regression?
 
-Linear regression is a simple method for statistical learning. In it's simplest form (aptly named simple regression), it deals with a single explanatory variable (sometimes called the predictor), denoted $X$ and the dependent variable (sometimes referred to as the outcome variable), denoted $Y$. The assumption is that there is a relationship between the two, and that $X$ can be used to predict the value of $Y$. This is usually expressed as $Y = f(X) + \epsilon$ . \
+Linear regression is a simple method for statistical learning. In it's simplest form (aptly named simple regression), it deals with a single explanatory variable (sometimes called the predictor), denoted $X$ and the dependent variable (sometimes referred to as the outcome variable), denoted $Y$. The assumption is that there is a relationship between the two, and that $X$ can be used to predict the value of $Y$. This is usually expressed as $Y = f(X) + \epsilon$ .\
 \
 $f$ is in this case a function of $X$, and $\epsilon$ (greek letter epsilon) is a random error term, that is independent of $X$ and has a mean zero. As an example, consider the following assumption: the miles per gallon (mpg) feature of a car has a relationship with it's weight, and we assume that the lower the weight, the higher the mpg.
 
@@ -113,10 +113,56 @@ linear_model <- lm(mpg ~ wt, data = mtcars)
 summary(linear_model)
 ```
 
-The summary lists various summaries of the model object that we might be interested in, such as the residuals, and the coefficients of the model. Additionally, we are given the $R^2$ score, as well as another important figure, the P-value (whether or not the relationship is statistically significant). Another option is to use the broom package. Using either tidy() or glance() gives us many of the same results, but in various other formats:
+### 1.1.1$R^2$
 
-```{r example_lm}
-linear_model <- lm(mpg ~ wt, data = mtcars)
-glance(linear_model)
-tidy(linear_model)
+The summary lists various summaries of the model object that we might be interested in, such as the residuals, and the coefficients of the model. Additionally, we are given the $R^2$ score, as well as another important figure, the P-value (whether or not the relationship is statistically significant). Another option is to use the broom package. Using either tidy() or glance() gives us many of the same results, but in various other formats. When dealing with a single predictor, $R^2$ is fine, but as you add more predictors, you tend to get small increases in $R^2$, although very small unless there is actually a relationship. The Adjusted $R^2$ adjusts for the number of predictors, and should thus be used if there are more than one predictor. In our mtcars example explaining mpg by weight, we have only one, so let's look at the $R^2$. 0,75 - or 75 % of the variance in $Y$ (mpg) can be explained our model. Ok, so not bad. Let's look at our second mtcars example. Going from a visual inspection of the scatterplot, we hypothesized that this might have a weaker correlation. Let's see:\
+
+```{r example_lm_2}
+
+linear_model <- lm(hp ~ disp, data = mtcars)
+summary(linear_model)
+```
+
+And indeed it seems that we were right! $R^2$ for the second model is 0,625, or 63 %. You can also see from the P-values of the summaries that both models are significant. While this does not imply causality, there is a very small chance that the variance explained by the model is just random chance. If our null hypothesis were that there are no relationship between mpg and weight or between horsepower and displacement, we could reject those.
+
+### 1.1.2 Residual standard error
+
+Another useful metric to look at is also available in the summary() output; the residual standard error or RSE. Recall the regression formula: $Y = f(X) + \epsilon$ where $\epsilon$ is the term for random errors. This is what is expressed in RSE; an estimate of the standard deviation of $\epsilon$. Roughly, this means that the RSE score is the average the output of the model will deviate from the true regression line.
+
+Looking at our first model; the RSE is scored at 3.046. The mean value of all mpg-values is 20.09, which means that the average deviation is around 15 % off. In our second model, the RSE score is 42.65. Note that the RSE score is given in the same units as the outcome variable, in this case horsepower (hp). The mean hp-value in the mtcars dataset is 146.68, which means that the RSE is quite large; and on average the deviation will be around 29 % off. This ties in with the $R^2$ score as well; the first model explained more of the variation in the outcome variable that the second.
+
+### 1.1.3 **Root Mean Square Error** (RMSE)
+
+The RMSE is another similar metric for evaluating model performance. It measures the standard deviation of the residuals, which also tells us how far off the regression line the predictions are. RMSE can either be calculated by hand, or calculated by the yardstick package, where you can specify which metrics you want. Let's see an example where we get two of the three we've taken a look at:
+
+```{r metrics_example}
+df <- mtcars
+model <- lm(mpg ~ wt, data = df)
+df$predicted <- predict(model)
+mtcars_metrics <- metric_set(rsq, rmse)
+mtcars_metrics(df, truth = mpg, estimate = predicted)
+```
+
+### 1.1.4 Residuals
+
+Residuals are another thing to consider.
+
+```{r ggplot example_residuals, echo=FALSE, }
+df <- mtcars
+model <- lm(mpg ~ wt, data = df)
+df$predicted <- predict(model)
+df$residuals <- residuals(model)
+
+
+
+ggplot(df, aes(x = wt, y = mpg)) +
+  geom_smooth(method = "lm", se = FALSE, color = "grey") +
+  geom_segment(aes(xend = wt, yend = predicted), alpha = 0.4, color = "red") +
+  geom_point(aes(color = residuals)) +  
+  scale_color_gradient2(low = "lightblue", mid = "orange", high = "red") +  
+  guides(color = FALSE) +
+  geom_point(aes(y = predicted), shape = 1) + 
+  labs(title = "Cars with lower weigth tend te get better mileage",
+       caption = "Source: 1974 Motor Trend US") + 
+  theme_bw()
 ```
