@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # 1 Definitions
 # 1.1 Package names 
 # Define the names of the packages to be used, these are stored in the packages variable, and loaded/installed as needed
-packages <- c("gapminder", "dplyr", "ggplot2", "rsample", "gridExtra", "tidymodels", "Metrics")
+packages <- c("gapminder", "dplyr", "ggplot2", "rsample", "gridExtra", "tidymodels")
 
 # 1.1 Packages description
 # 
@@ -145,7 +145,7 @@ mtcars_metrics(df, truth = mpg, estimate = predicted)
 
 ### 1.1.4 Residuals
 
-Residuals are another thing to consider.
+Residuals are another thing to consider. Defined as the difference between the predicted value of $Y$ and the true value of $Y$. In a linear regression, it is the vertical distance from the true value and the regression line. Below, this is shown with lines going from the predicted values on the regression line (shown as hollow points), and the actual values shown in color.
 
 ```{r ggplot example_residuals, echo=FALSE, }
 df <- mtcars
@@ -162,7 +162,74 @@ ggplot(df, aes(x = wt, y = mpg)) +
   scale_color_gradient2(low = "lightblue", mid = "orange", high = "red") +  
   guides(color = FALSE) +
   geom_point(aes(y = predicted), shape = 1) + 
-  labs(title = "Cars with lower weigth tend te get better mileage",
+  labs(title = "Cars with lower weigth tend to get better mileage",
        caption = "Source: 1974 Motor Trend US") + 
   theme_bw()
+```
+
+Again, we can consider the difference between two models. Let's keep miles per gallon as our outcome variable, but look at two different predictors. IN the above model, we looked at weight. Let's consider horsepower instead.
+
+```{r ggplot example_residuals_model2, echo=FALSE, }
+df <- mtcars
+model <- lm(mpg ~ hp, data = df)
+df$predicted <- predict(model)
+df$residuals <- residuals(model)
+
+
+
+ggplot(df, aes(x = hp, y = mpg)) +
+  geom_smooth(method = "lm", se = FALSE, color = "grey") +
+  geom_segment(aes(xend = hp, yend = predicted), alpha = 0.4, color = "red") +
+  geom_point(aes(color = residuals)) +  
+  scale_color_gradient2(low = "lightblue", mid = "orange", high = "red") +  
+  guides(color = FALSE) +
+  geom_point(aes(y = predicted), shape = 1) + 
+  labs(title = "Cars with lower hp tend to get better mileage",
+       caption = "Source: 1974 Motor Trend US") + 
+  theme_bw()
+```
+
+From a visual inspection, the residuals seem to be larger in this model, indicating a poorer fit. Let's look at the RMSE and $R^2$:
+
+```{r compare models}
+df <- mtcars
+model1 <- lm(mpg ~ wt, data = df)
+model2 <- lm(mpg ~ hp, data = df)
+df$pred_mod1 <- predict(model1)
+df$pred_mod2 <- predict(model2)
+df$resid_mod1 <- residuals(model1)
+df$resid_mod2 <- residuals(model2)
+
+model_metrics <- metric_set(rsq, rmse)
+mod1_res <- model_metrics(df, truth = mpg, estimate = pred_mod1)
+mod2_res <- model_metrics(df, truth = mpg, estimate = pred_mod2)
+
+
+p1 <- ggplot(df, aes(x = wt, y = mpg)) +
+  geom_smooth(method = "lm", se = FALSE, color = "grey") +
+  geom_segment(aes(xend = wt, yend = pred_mod1), alpha = 0.4, color = "red") +
+  geom_point(aes(color = resid_mod1)) +  
+  scale_color_gradient2(low = "lightblue", mid = "orange", high = "red") +  
+  guides(color = FALSE) +
+  geom_point(aes(y = pred_mod1), shape = 1) + 
+  labs(title = "mpg explained by weight",
+       caption = "Source: 1974 Motor Trend US") + 
+  annotate("text", x = 4,5, y = 25, label = paste("R-Squared: ", round(mod1_res[1,3],2))) + 
+  annotate("text", x = 4,5, y = 22, label = paste("RMSE: ", round(mod1_res[2,3],2))) +
+  theme_bw()
+
+p2 <- ggplot(df, aes(x = hp, y = mpg)) +
+  geom_smooth(method = "lm", se = FALSE, color = "grey") +
+  geom_segment(aes(xend = hp, yend = pred_mod2), alpha = 0.4, color = "red") +
+  geom_point(aes(color = resid_mod2)) +  
+  scale_color_gradient2(low = "lightblue", mid = "orange", high = "red") +  
+  guides(color = FALSE) +
+  geom_point(aes(y = pred_mod2), shape = 1) + 
+  labs(title = "mpg explained by hp",
+       caption = "Source: 1974 Motor Trend US") + 
+  annotate("text", x = 250, y = 25, label = paste("R-Squared: ", round(mod2_res[1,3],2))) + 
+  annotate("text", x = 250, y = 22, label = paste("RMSE: ", round(mod2_res[2,3],2))) +
+  theme_bw()
+
+grid.arrange(p1, p2, ncol = 2)
 ```
