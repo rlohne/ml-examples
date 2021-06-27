@@ -191,7 +191,7 @@ ggplot(df, aes(x = hp, y = mpg)) +
 
 From a visual inspection, the residuals seem to be larger in this model, indicating a poorer fit. Let's look at the RMSE and $R^2$:
 
-```{r compare models}
+```{r compare models, echo=FALSE}
 df <- mtcars
 model1 <- lm(mpg ~ wt, data = df)
 model2 <- lm(mpg ~ hp, data = df)
@@ -233,3 +233,117 @@ p2 <- ggplot(df, aes(x = hp, y = mpg)) +
 
 grid.arrange(p1, p2, ncol = 2)
 ```
+
+Graphing the models together, it is easier to see the differences. The model using hp as a predictor seems to struggle somewhat more. This can also be seen in the lower $R^2$ score, and a higher RMSE-score.
+
+## 1.2 Splitting data
+
+Until now though, we have modeled and predicted on the same dataset. This is risky, and not a good estimate on how our model would perform if we added new cars to the dataset. The norm is instead to split the data into several datasets. One strategy is to use a train/test split, where the larger part (often 70 or 80 %) of the data is spent on training the model, and then the remaining is used as a test set, where we test to see what kind of accuracy the model will have on unseen data. A second option is to create three sets, the training data (70 %), a validation set (15 %) and a test set (15%). This is typically done if we want to check multiple different models or algorithms prior to selecting one to expose on the test data.
+
+We will be using the rsample package found in tidymodels to perform the split, and we'll go with a regular train/test split. For this, we are going to use a larger dataset, the built-in dataset called diamonds, which contains data about approximately 50.000 diamonds. We are going to use this to train a linear regression model, and use all available features to see if we can predict the sales price. This is a multiple regression, since we now have more than one predictor variable.
+
+```{r create datasets}
+
+set.seed(42) # set the seed so that future iterations will have the same results
+diamond_split <- initial_split(diamonds, prop = 0.8)
+train <- diamond_split %>%
+  training()
+
+test <- diamond_split %>% 
+  testing()
+
+mean(train$price)
+mean(test$price)
+mean(diamonds$price)
+
+```
+
+Sometimes, splitting datasets can create class imbalance. To check for this, I've compared the mean sales price of the test, training and original datasets. If imbalance seemed to be a problem, we could've used the stata argument in initial_split(), specifying a stratification on the price variable.
+
+## 1.3 Training the model
+
+Later on, we will start using the parsnip package to train models, but for now, let's keep going with the lm() function.
+
+```{r create datasets, echo=FALSE }
+
+set.seed(42) # set the seed so that future iterations will have the same results
+diamond_split <- initial_split(diamonds, prop = 0.8)
+train <- diamond_split %>%
+  training()
+
+linear_model <- lm(price ~ ., data = train)
+metrics <- metric_set(rsq, rmse)
+train$predicted <- predict(linear_model)
+metrics <- metric_set(rsq, rmse)
+metrics(train, truth = price, estimate = predicted)
+
+```
+
+Our model shows an $R^2$ of 92 %, and RMSE is 1128 - meaning that on average, we will be off by 1128 dollars. Given that the mean price is around 3900, this is somewhat high. Let's see what we can do with this. Let's start by visualizing the data we are interested in - the price. Linear regression works better on data that is normally distributed, so let's start with a histogram.
+
+```{r histogram of training data, echo=FALSE}
+set.seed(42) # set the seed so that future iterations will have the same results
+diamond_split <- initial_split(diamonds, prop = 0.8)
+train <- diamond_split %>%
+  training()
+
+ggplot(train, aes(x = price)) + 
+  geom_histogram()
+```
+
+Hm! A large number of the diamonds are between 0 and 5000 dollar, meaning that we have a right-skewed distribution. Let's see if plotting this on a log_10 scale helps:
+
+```{r histogram of training data with log_10, echo=FALSE}
+set.seed(42) # set the seed so that future iterations will have the same results
+diamond_split <- initial_split(diamonds, prop = 0.8)
+train <- diamond_split %>%
+  training()
+
+ggplot(train, aes(x = price)) + 
+  geom_histogram() + 
+  scale_x_log10()
+```
+
+Ok - this looks better. It's not completely normally distributed, but it certainly looks better. Let's perform a log transformation of our data:
+
+```{r training the model and assessing fit, echo=FALSE}
+set.seed(42) # set the seed so that future iterations will have the same results
+diamond_split <- initial_split(diamonds, prop = 0.8)
+train <- diamond_split %>%
+  training()
+
+train$price <- log10(train$price)
+
+linear_model <- lm(price ~ ., data = train)
+metrics <- metric_set(rsq, rmse)
+train$predicted <- predict(linear_model)
+metrics <- metric_set(rsq, rmse)
+metrics(train, truth = price, estimate = predicted)
+```
+
+After the transformation, we get a RMSE-score of 0.07. Now, did we go from predicting 1128 off the true value on average to 7 cents on average? No - we didn't. The outcome variable has been log10 transformed, so the units are no longer in dollars. What this score means is that on average, our predictions will be 7 % off the geometric mean. Consider that with a mean of around \$3900 and an error of \$1128, we were off by around 29 % before the log transformation - so this is a rather good improvement. Now, let's see how well our model performs on unseen data; the test set.
+
+## 1.4 Testing the model
+
+```{r histogram of training data, log transformed, echo=FALSE}
+set.seed(42) # set the seed so that future iterations will have the same results
+diamond_split <- initial_split(diamonds, prop = 0.8)
+train <- diamond_split %>%
+  training()
+test <- diamond_split %>%
+  testing()
+
+train$price <- log10(train$price)
+test$price <- log10(test$price)
+linear_model <- lm(price ~ ., data = train)
+test$predicted <- predict(linear_model, newdata = test)
+
+metrics <- metric_set(rsq, rmse)
+metrics(test, truth = price, estimate = predicted)
+```
+
+And there we have it. The final $R^2$ score is a bit lower than on the training data, but not by a lot. RMSE is very similar, although a bit higher than on the test set, which is what we would expect given that the $R^2$ was lower as well.
+
+## 1.5 A note on the workflow
+
+In the later
