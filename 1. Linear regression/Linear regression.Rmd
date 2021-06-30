@@ -1,5 +1,4 @@
 ---
-t = t---
 title: "1. Linear regression"
 author: "Robert Lohne"
 date: "13 6 2021"
@@ -96,7 +95,7 @@ Let's revisit the two previous models; mpg explained by weight, and horsepower e
 
 In R, a simple way of defining a linear model is to use the lm() function, creating a model object.
 
-```{r example_lm}
+```{r example_lm_1}
 
 linear_model <- lm(mpg ~ wt, data = mtcars)
 ```
@@ -107,7 +106,7 @@ The formula is given in a specific syntax, where the outcome variable (denoted $
 
 The call to lm() creates a model object, and the results can be seen using various methods. The standard one being summary().
 
-```{r example_lm}
+```{r example_lm_2}
 
 linear_model <- lm(mpg ~ wt, data = mtcars)
 summary(linear_model)
@@ -117,7 +116,7 @@ summary(linear_model)
 
 The summary lists various summaries of the model object that we might be interested in, such as the residuals, and the coefficients of the model. Additionally, we are given the $R^2$ score, as well as another important figure, the P-value (whether or not the relationship is statistically significant). Another option is to use the broom package. Using either tidy() or glance() gives us many of the same results, but in various other formats. When dealing with a single predictor, $R^2$ is fine, but as you add more predictors, you tend to get small increases in $R^2$, although very small unless there is actually a relationship. The Adjusted $R^2$ adjusts for the number of predictors, and should thus be used if there are more than one predictor. In our mtcars example explaining mpg by weight, we have only one, so let's look at the $R^2$. 0,75 - or 75 % of the variance in $Y$ (mpg) can be explained our model. Ok, so not bad. Let's look at our second mtcars example. Going from a visual inspection of the scatterplot, we hypothesized that this might have a weaker correlation. Let's see:\
 
-```{r example_lm_2}
+```{r example_lm_3}
 
 linear_model <- lm(hp ~ disp, data = mtcars)
 summary(linear_model)
@@ -264,7 +263,7 @@ Sometimes, splitting datasets can create class imbalance. To check for this, I'v
 
 Later on, we will start using the parsnip package to train models, but for now, let's keep going with the lm() function.
 
-```{r create datasets, echo=FALSE }
+```{r create datasets2, echo=FALSE }
 
 set.seed(42) # set the seed so that future iterations will have the same results
 diamond_split <- initial_split(diamonds, prop = 0.8)

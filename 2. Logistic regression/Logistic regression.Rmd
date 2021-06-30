@@ -1,0 +1,76 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+############################################################
+## Define packages to be loaded, and if needed, installed ##
+##                                                        ##    
+## by robert lohne (rlohne@gmail.com / @robertlohne)      ##
+############################################################
+
+# 1 Definitions
+# 1.1 Package names 
+# Define the names of the packages to be used, these are stored in the packages variable, and loaded/installed as needed
+packages <- c("gapminder", "dplyr", "ggplot2", "gridExtra", "tidymodels", "titanic")
+
+# 1.1 Packages description
+# 
+
+# 2. Install packages not yet installed
+# Installed packages are stored in the installed packages variable
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# 3. Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
+```
+
+# 1. Introduction to logistic regression
+
+Where linear regression is commonly used to predict continuous outcome variables, it can also be used for binary classifications. However, because it cannot easily predict qualitative outcome variables with more than two levels, another approach is needed. In this notebook, we'll look at logistic regression. There are indeed others as well, and we'll get to those in another notebook.
+
+## 1.1 Binary outcomes - icebergs ahoi!
+
+Let's first consider a classic classification task; a binary outcome. In this case, we will use the basic Titanic dataset that is built into R, and predict whether or not passengers survive.
+
+Let's take a look at the dataset:
+
+```{r titanic dataset glance}
+train <- titanic_train
+test <- titanic_test
+str(train)
+str(test)
+
+```
+
+The response variable will be Survived, and our predictors are. With logistic regression, you model the probability that your response variable belongs to a certain category. In our case, Yes or No to the question "Did this passenger survive Titanic?".
+
+In this example, we are dealing with a binomial, or binary logistic regression. This means that the outcome variable have only two possible types. A multinominal logistic regression is when the outcome variable can have three or more possible types, but they are not ordered (for instance if we tried to predict whether a car in the mtcars dataset was a SUV, a convertible or a sedan. The last type is the ordinal logistic regression, which is similar to the multinominal, but the levels are ordered. For instance if we tried to predict which Class a passenger traveled in on the Titanic. \
+\
+Mathematically, the formula for the probability of $Y$ being equal to 1 (Survived) can be expressed as:
+
+$\log_b \frac{\rho}{1- \rho} = \beta_0  + B_1\chi_1 + B_2\chi_2 + B_3\chi_3$
+
+where $log$ symbolizes the log-odds (logit), $_b$ is the base of the logarithm, and $\beta_1$, $\beta_2$, and $\beta_3$ the predictors.
+
+## 1.2 Splitting the data
+
+In order to train and test our model, we split the dataset into two sets; the training and the test dataset. We use the initial_split() function from the rsample-package, and choose a 70/30 split:
+
+```{r create datasets}
+
+set.seed(42) # set the seed so that future iterations will have the same results
+titanic <- data("Titanic")
+titanic_split <- initial_split(titanic, prop = 0.7)
+train <- titanic_split %>%
+  training()
+
+test <- titanic_split %>% 
+  testing()
+```
