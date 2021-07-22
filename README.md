@@ -4,7 +4,9 @@
 
 There are a lot of well written introductions, guides and so forth out there. So why write another? I've wanted to do a series on various machine learning techniques for while. Primarily because I want to learn more, and partly because I want to share that journey. I believe there are a lot of people who can benefit from having a deeper understanding of what machine learning is, without necessarily being the ones who are going to implement it in a production environment. Or becoming crack data scientists themselves.
 
-What I aim to do with this series is therefore to show some techniques; beginning with a simple linear regression, and gradually moving on. I will cover the various types with readily accessible datasets. The markdown files will all be available on [GitHub](https://github.com/rlohne/ml-examples). Each method will be briefly explained, and I'll walk you through the steps, all with a beginners perspective.
+What I aim to do with this series is therefore to show some techniques; beginning with a simple linear regression, and gradually moving on. As a beginner, I've done most of the steps manually (EDA, handling missing data, feature engineering etc.). For the first installment of the series (linear regression), I will do this the manually. For the rest of the series, I will use the tidymodels package, and functions like receipe, prep and bake etc. The workflow using a tidymodels approach will be explained.
+
+I will cover the various types with readily accessible datasets, and for the most part I will be using the "Default" dataset from the ISLR-package. This allows us to compare different models as well. The markdown files will all be available on [GitHub](https://github.com/rlohne/ml-examples). Each method will be briefly explained, and I'll walk you through the steps, all with a beginners perspective.
 
 ## About the author
 
