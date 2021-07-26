@@ -1,3 +1,5 @@
+------------------------------------------------------------------------
+
 ---
 title: "R Notebook"
 output: html_notebook
@@ -15,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # 1 Definitions
 # 1.1 Package names 
 # Define the names of the packages to be used, these are stored in the packages variable, and loaded/installed as needed
-packages <- c("gapminder", "dplyr", "ggplot2", "gridExtra", "tidymodels", "ISLR", "mice", "visdat", "naniar", "parallel")
+packages <- c("gapminder", "dplyr", "ggplot2", "gridExtra", "tidymodels", "ISLR", "mice", "visdat", "naniar", "parallel", "corrplot", "RColorBrewer")
 
 # 1.1 Packages description
 # 
@@ -37,7 +39,7 @@ Where linear regression is commonly used to predict continuous outcome variables
 
 ## 1.1 Binary outcomes
 
-Let's first consider a classic classification task; a binary outcome. In this case, we will use the Default dataset, and predict whether or not customers default on their loan. We're going to work with what we have in the dataset, and also try to do some feature engineering.
+Let's first consider a classic classification task; a binary outcome. In this case, we will use the mlc_churn dataset from the modeldata-package. The dataset contains (fictional) data about telecom-customers, and the goal is to predict whether or not the customer churns (i.e. leaves the company).
 
 In this example, we are dealing with a binomial, or binary logistic regression. This means that the outcome variable have only two possible types. A multinominal logistic regression is when the outcome variable can have three or more possible types, but they are not ordered (for instance if we tried to predict whether a car in the mtcars dataset was a SUV, a convertible or a sedan. The last type is the ordinal logistic regression, which is similar to the multinominal, but the levels are ordered. For instance if we tried to predict which Class a passenger traveled in on the Titanic.\
 \
@@ -52,8 +54,87 @@ where $log$ symbolizes the log-odds (logit), $_b$ is the base of the logarithm, 
 Let's look at our data. First, we take a look at the variables, their types and if any data are missing. To do this, I am going to use the vis_dat() function for the visdat-package. I like visdat because it has some very intuitive to use functions for visualizing a dataset - in particular when it comes to missing data. We start by loading the data and looking at it:
 
 ```{r visualize the Default dataset}
-loans_df <- Default
-vis_dat(loans_df)
+data(mlc_churn)
+vis_dat(mlc_churn)
 ```
 
-As the figure above shows, we have two factor variables, default and student, and two numeric, income and
+In total, the dataset has 20 variables. five are factors, including our target variable (churn), seven are integers and eight are numeric. In data terms, 19 of the variables are predictors, and the last one is our target, or outcome, variable.
+
+## 1.3 Workflow outline
+
+In the linear regression example, we trained and predicted using a manual approach. In this example, we will be using the tidymodels (<https://www.tidymodels.org/>) ecosystem of packages, which is also a part of the tidyverse. Tidymodels is the overall package, and loads the core packages. These are:
+
+*rsample:* provides functions for splitting datasets, and resampling data
+
+*parsnip:* if you want to test different models, parsnip acts as a unified interface so you don't have to worry about the different syntaxes
+
+*recipes:* the recipes package provides useful functions for pre-processing, including removing multicollinearity, centering and scaling numeric variables, dummy-encoding and so forth
+
+*workflows:* creates a workflow of your pre-processing, modeling and post work
+
+*tune:* tune provides functions to tune the hyperparameters of your models
+
+*yardstick:* the yardstick package is used to calculate metrics for classifications, regressions, class probabilities and more
+
+*broom:* broom provides information from statistical objects, such as model objects, in a tidy format
+
+*dials:* dials is used to tune parameters and perform grid searches for the best parameters
+
+In this example, we will follow these steps:
+
+1)  Split the dataset into two sets, using *rsample\
+    *2) Inspect the training data to look for missing data\
+2)  Prepare a recipe with steps to remove any multicolinarity, centering and normalizing variables, dummy-encoding etc.\
+3)  Train the recipe on the training data\
+4)  Transform the training data using the recipe\
+5)  Train the logistic regression model on the training data\
+6)  Obtain predictions from the model (from our training data)\
+7)  Calculate metrics for our model\
+8)  Tune hyperparameters\
+9)  Choose the best model\
+10) Predict on the test dataset\
+11) Collect metrics for the test dataset\
+12) Summarize
+
+# 2 Training the model
+
+## 2.1 Splitting the dataset
+
+We have 5000 observations, and we'll split these in two groups, our training and our test datasets. This will be done using *rsample*, and more specifically, the initial_split() function:
+
+```{r split data}
+# Create the split 
+churn_split <- initial_split(mlc_churn, strata = churn)
+
+# Create the training data
+train <- churn_split %>%
+  training()
+
+test <- churn_split %>%
+  testing()
+
+
+```
+
+## 2.2 Looking at our data
+
+Let's start by looking at our data. Normally, we'd perform what's known as Exploratory Data Analysis (EDA), but this is beyond the scope of this example, and will be the subject of it's own example. 15 of our variables are numeric, so let's see if there is any signs of multicolinarity going on:
+
+```{r looking at our data}
+train %>%
+  select(is.numeric) %>%
+  cor() %>% 
+  corrplot(type = "upper", order = "hclust", tl.pos = "n", 
+           method = "circle")
+
+
+```
+
+I've removed the labels, since they are very long, but there seems to be some highly correlated variables. Let's investigate a bit further:
+
+```{r investigate correlation}
+train %>%
+  select(is.numeric()) %>%
+  cor() %>%
+  
+```
