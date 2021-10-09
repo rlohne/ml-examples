@@ -135,6 +135,6 @@ I've removed the labels, since they are very long, but there seems to be some hi
 ```{r investigate correlation}
 train %>%
   select(is.numeric()) %>%
-  cor() %>%
+  cor()
   
 ```
